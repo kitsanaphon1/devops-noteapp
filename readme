@@ -1,0 +1,4 @@
+✅ สิ่งที่ได้จากการเพิ่ม archiveArtifacts
+Jenkins job จะเก็บไฟล์ vm_ip.txt เป็น artifact หลังจากรันเสร็จ
+
+Jenkins job อื่นสามารถใช้ copyArtifacts เพื่อใช้งาน IP ได้ทันที
