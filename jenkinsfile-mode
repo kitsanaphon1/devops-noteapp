@@ -3,9 +3,9 @@ pipeline {
 
   environment {
     // ✅ กำหนดค่าพื้นฐานสำหรับ Terraform
-    TERRAFORM_HOST = "20.198.249.21"       // IP ของเครื่องที่ใช้รัน Terraform
+    TERRAFORM_HOST = "10.1.0.5"       // IP ของเครื่องที่ใช้รัน Terraform
     TERRAFORM_USER = "sooya"               // SSH user
-    TF_REPO        = "https://github.com/kitsanaphon1/terraform-version01.git"  // Git repo ที่เก็บ .tf
+    TF_REPO        = "https://github.com/kitsanaphon1/devops-noteapp.git"  // Git repo ที่เก็บ .tf
     TF_DIR         = "/home/sooya/terraform"  // โฟลเดอร์ปลายทางใน VM
 
     // ✅ เปลี่ยนโหมดได้ง่าย ๆ ที่นี่: "apply" หรือ "destroy"
