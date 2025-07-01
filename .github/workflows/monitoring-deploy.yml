@@ -1,0 +1,42 @@
+name: Monitoring Docker Deploy
+
+on:
+  workflow_dispatch:  # ✅ manual run ได้จาก GitHub UI
+
+jobs:
+  deploy-monitoring:
+    name: Deploy Monitoring Stack
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Copy monitoring files to remote Docker server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "./monitoring"
+          target: "/home/${{ secrets.SSH_USER }}/"
+
+      - name: Run Docker Compose on server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/${{ secrets.SSH_USER }}/monitoring
+
+            # ✅ เตรียมโฟลเดอร์ให้ Loki แบบครบ พร้อมสิทธิ์ root
+            sudo mkdir -p loki-data/chunks
+            sudo mkdir -p loki-data/index
+            sudo mkdir -p loki-data/boltdb-cache
+            sudo mkdir -p loki-data/compactor
+            sudo chmod -R 777 loki-data
+
+            # ✅ รัน Docker Compose ใหม่
+            docker-compose down || true
+            docker-compose up -d

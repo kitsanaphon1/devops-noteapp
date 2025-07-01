@@ -1,0 +1,57 @@
+name: Deploy by Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "เลือก Docker Compose Version"
+        required: true
+        type: choice
+        options:
+          - version1.0
+          - version2.0
+          - version3.0
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📂 Checkout Code
+        uses: actions/checkout@v3
+
+      - name: 🚀 Deploy version ${{ github.event.inputs.version }}
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            VERSION=${{ github.event.inputs.version }}
+
+            echo "📦 เริ่ม deploy version: $VERSION"
+
+            # ✅ เคลียร์ repo เดิมก่อน
+            rm -rf ~/docker-deploy
+            git clone https://github.com/${{ github.repository }}.git ~/docker-deploy
+
+            cd ~/docker-deploy
+            git checkout ${{ github.ref_name }}
+            cd docker-compose/$VERSION
+
+            echo "🛑 หยุดและลบ container เดิม"
+            docker-compose down --remove-orphans || true
+
+            echo "🧹 ลบ container ชื่อ fix เดิม (ถ้ามี)"
+            docker rm -f postgres_db || true
+            docker rm -f webapi_container || true
+            docker rm -f webapp_container || true
+
+            echo "📥 ดึง image ล่าสุด"
+            docker-compose pull
+
+            echo "🚀 รัน container ใหม่แบบ clean"
+            docker-compose up -d --build
+
+            echo "✅ Deploy สำเร็จ version: $VERSION"

@@ -1,0 +1,22 @@
+# .github/workflows/test-ssh.yml
+name: Test SSH Connection
+
+on:
+  workflow_dispatch:  # ให้เรียก workflow เองได้จากหน้า GitHub
+
+jobs:
+  ssh-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔐 Test SSH Connection
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}       # IP ของ Azure VM
+          username: ${{ secrets.SSH_USER }}   # ชื่อผู้ใช้ใน VM เช่น ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }} # private key ที่คุณใส่ไว้
+          script: |
+            echo "✅ SSH Connected!"
+            whoami
+            uname -a
+            uptime
