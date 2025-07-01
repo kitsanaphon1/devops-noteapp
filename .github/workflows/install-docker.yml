@@ -34,3 +34,6 @@ jobs:
 
             echo "🧱 Docker Compose version:"
             docker-compose --version
+
+            echo "✅ Running hello-world container to verify installation..."
+            sudo docker run --rm hello-world
