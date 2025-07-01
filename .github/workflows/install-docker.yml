@@ -20,7 +20,7 @@ jobs:
             sudo apt-get update -y
 
             echo "📦 Installing Docker..."
-            sudo apt-get install -y docker.io docker-compose
+            sudo apt-get install -y docker.io
 
             echo "🛠 Enabling Docker service..."
             sudo systemctl enable docker
@@ -31,6 +31,13 @@ jobs:
 
             echo "🐳 Docker version:"
             docker --version
+
+            echo "⬇️ Downloading Docker Compose 1.29.2..."
+            sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" \
+              -o /usr/local/bin/docker-compose
+
+            echo "🔑 Applying executable permissions to Docker Compose binary..."
+            sudo chmod +x /usr/local/bin/docker-compose
 
             echo "🧱 Docker Compose version:"
             docker-compose --version
