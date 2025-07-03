@@ -1,0 +1,102 @@
+pipeline {
+  agent any
+
+  environment {
+    // ✅ กำหนดค่าพื้นฐานสำหรับ Terraform
+    TERRAFORM_HOST = "10.1.0.5"       // IP ของเครื่องที่ใช้รัน Terraform
+    TERRAFORM_USER = "sooya"          // SSH user
+    TF_REPO        = "https://github.com/kitsanaphon1/devops-noteapp.git"  // Git repo ที่เก็บ .tf
+    TF_DIR         = "/home/sooya/terraform-multivm"  // ✅ โฟลเดอร์ใหม่ (multi-vm)
+
+    // ✅ เปลี่ยนโหมดได้ง่าย ๆ ที่นี่: "apply" หรือ "destroy"
+    TF_MODE        = "apply"  // 🔁 เปลี่ยนเป็น "destroy" หากต้องการลบ
+  }
+
+  stages {
+
+    // 📥 Clone Repo หรือ Pull Update
+    stage('📥 Git Clone on Terraform VM') {
+      steps {
+        sshagent(credentials: ['ssh-terraform-agent']) {
+          sh """
+            ssh -o StrictHostKeyChecking=no ${TERRAFORM_USER}@${TERRAFORM_HOST} '
+              if [ ! -d ${TF_DIR} ]; then
+                git clone ${TF_REPO} ${TF_DIR};
+              else
+                cd ${TF_DIR} && git pull;
+              fi
+            '
+          """
+        }
+      }
+    }
+
+    // 💻 Terraform Apply หรือ Destroy
+    stage('💻 Terraform Apply or Destroy') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'ARM_CLIENT_ID', variable: 'ARM_CLIENT_ID'),
+          string(credentialsId: 'ARM_CLIENT_SECRET', variable: 'ARM_CLIENT_SECRET'),
+          string(credentialsId: 'ARM_SUBSCRIPTION_ID', variable: 'ARM_SUBSCRIPTION_ID'),
+          string(credentialsId: 'ARM_TENANT_ID', variable: 'ARM_TENANT_ID')
+        ]) {
+          sshagent(credentials: ['ssh-terraform-agent']) {
+            sh """
+              ssh -o StrictHostKeyChecking=no ${TERRAFORM_USER}@${TERRAFORM_HOST} '
+                export ARM_CLIENT_ID="${ARM_CLIENT_ID}" &&
+                export ARM_CLIENT_SECRET="${ARM_CLIENT_SECRET}" &&
+                export ARM_SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID}" &&
+                export ARM_TENANT_ID="${ARM_TENANT_ID}" &&
+
+                cd ${TF_DIR} &&
+
+                terraform init -no-color &&
+                terraform ${TF_MODE} -var-file=terraform.tfvars -auto-approve -no-color
+              '
+            """
+          }
+        }
+      }
+    }
+
+    // 🌐 Get All VM Public IPs
+    stage('🌐 Get All VM Public IPs') {
+      when {
+        expression { return env.TF_MODE == 'apply' }
+      }
+      steps {
+        sshagent(credentials: ['ssh-terraform-agent']) {
+          script {
+            def ipsJson = sh(
+              script: """
+                ssh -o StrictHostKeyChecking=no ${TERRAFORM_USER}@${TERRAFORM_HOST} '
+                  cd ${TF_DIR} &&
+                  terraform output -json public_ips
+                '
+              """,
+              returnStdout: true
+            ).trim()
+
+            echo "✅ Public IPs JSON จาก Terraform: ${ipsJson}"
+
+            def ipOutput = readJSON text: ipsJson
+
+            echo "📘 Public IPs:"
+            ipOutput.value.each { ip ->
+              echo " - ${ip}"
+            }
+
+            // เขียนไฟล์ txt รวม IPs
+            def ipText = ipOutput.value.join("\\n")
+            writeFile file: 'vm_ips.txt', text: ipText
+
+            // เขียนไฟล์ json
+            writeFile file: 'vm_public_ips.json', text: ipsJson
+
+            archiveArtifacts artifacts: 'vm_ips.txt,vm_public_ips.json', fingerprint: true
+          }
+        }
+      }
+    }
+  }
+}
