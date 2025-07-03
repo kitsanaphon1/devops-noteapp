@@ -31,6 +31,25 @@ pipeline {
       }
     }
 
+    // 🛠 Ensure jq Installed
+    stage('🛠 Ensure jq Installed') {
+      steps {
+        sshagent(credentials: ['ssh-terraform-agent']) {
+          sh """
+            ssh -o StrictHostKeyChecking=no ${TERRAFORM_USER}@${TERRAFORM_HOST} '
+              if ! command -v jq >/dev/null 2>&1; then
+                echo "🔹 jq not found. Installing..."
+                sudo apt-get update &&
+                sudo apt-get install -y jq
+              else
+                echo "✅ jq already installed. Skipping installation."
+              fi
+            '
+          """
+        }
+      }
+    }
+
     // 💻 Terraform Apply หรือ Destroy
     stage('💻 Terraform Apply or Destroy') {
       steps {
@@ -67,7 +86,7 @@ pipeline {
       steps {
         sshagent(credentials: ['ssh-terraform-agent']) {
           script {
-            // ✅ ดึงและ format IPs เป็นบรรทัดชื่อ VM + IP เลย
+            // ✅ ดึงและ format IPs เป็นบรรทัดชื่อ VM + IP
             def ipText = sh(
               script: """
                 ssh -o StrictHostKeyChecking=no ${TERRAFORM_USER}@${TERRAFORM_HOST} '
