@@ -6,7 +6,7 @@ pipeline {
     TERRAFORM_USER = "sooya"
     TF_REPO        = "https://github.com/kitsanaphon1/devops-noteapp.git"
     TF_DIR         = "/home/sooya/terraform-vm5/devops-noteapp"
-    TF_MODE        = "apply"  // หรือ "destroy"
+    TF_MODE        = "destroy"  // หรือ "destroy"
   }
 
   stages {
