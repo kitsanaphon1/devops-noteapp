@@ -8,8 +8,8 @@ pipeline {
     TF_REPO        = "https://github.com/kitsanaphon1/devops-noteapp.git"  // Git repo หลัก
     TF_DIR         = "/home/sooya/terraform-vm5/devops-noteapp"  // ✅ ชี้ไปโฟลเดอร์ repo root
 
-     // ✅ เปลี่ยนโหมดได้ง่าย ๆ ที่นี่: "apply" หรือ "destroy"
-    TF_MODE        = "apply"  // 🔁 เปลี่ยนเป็น "destroy" หากต้องการลบ
+    // ✅ เปลี่ยนโหมดได้ง่าย ๆ
+    TF_MODE        = "apply"  // หรือ "destroy"
   }
 
   stages {
@@ -79,15 +79,16 @@ pipeline {
 
             echo "✅ Public IPs JSON จาก Terraform: ${ipsJson}"
 
-            def ipOutput = readJSON text: ipsJson
+            // ✅ ใช้ JsonSlurper แทน readJSON
+            def ipOutput = new groovy.json.JsonSlurperClassic().parseText(ipsJson)
 
             echo "📘 Public IPs:"
-            ipOutput.value.each { ip ->
+            ipOutput.each { ip ->
               echo " - ${ip}"
             }
 
             // เขียนไฟล์ txt รวม IPs
-            def ipText = ipOutput.value.join("\\n")
+            def ipText = ipOutput.join("\\n")
             writeFile file: 'vm_ips.txt', text: ipText
 
             // เขียนไฟล์ json
