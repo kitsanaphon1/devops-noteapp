@@ -6,7 +6,7 @@ pipeline {
     TERRAFORM_HOST = "10.1.0.5"       // IP ของเครื่องที่ใช้รัน Terraform
     TERRAFORM_USER = "sooya"          // SSH user
     TF_REPO        = "https://github.com/kitsanaphon1/devops-noteapp.git"  // Git repo หลัก
-    TF_DIR         = "/home/sooya/terraform-vm5/devops-noteapp"  // ✅ ชี้ไปโฟลเดอร์ repo root
+    TF_DIR         = "/home/sooya/terraform-vm5/devops-noteapp"            // ✅ โฟลเดอร์ repo root
 
     // ✅ เปลี่ยนโหมดได้ง่าย ๆ
     TF_MODE        = "apply"  // หรือ "destroy"
@@ -67,34 +67,26 @@ pipeline {
       steps {
         sshagent(credentials: ['ssh-terraform-agent']) {
           script {
-            def ipsJson = sh(
+            // ✅ ดึงและ format IPs เป็นบรรทัดชื่อ VM + IP เลย
+            def ipText = sh(
               script: """
                 ssh -o StrictHostKeyChecking=no ${TERRAFORM_USER}@${TERRAFORM_HOST} '
                   cd ${TF_DIR}/terraform-multivm &&
-                  terraform output -json public_ips
+                  terraform output -json public_ips |
+                  jq -r ".[]" |
+                  awk "{printf \\"sooya-vm-%d %s\\\\n\\", NR-1, \$0}"
                 '
               """,
               returnStdout: true
             ).trim()
 
-            echo "✅ Public IPs JSON จาก Terraform: ${ipsJson}"
+            echo "📘 Public IPs with VM names:"
+            echo ipText
 
-            // ✅ ใช้ JsonSlurper แทน readJSON
-            def ipOutput = new groovy.json.JsonSlurperClassic().parseText(ipsJson)
-
-            echo "📘 Public IPs:"
-            ipOutput.each { ip ->
-              echo " - ${ip}"
-            }
-
-            // เขียนไฟล์ txt รวม IPs
-            def ipText = ipOutput.join("\\n")
+            // ✅ เขียนไฟล์ txt
             writeFile file: 'vm_ips.txt', text: ipText
 
-            // เขียนไฟล์ json
-            writeFile file: 'vm_public_ips.json', text: ipsJson
-
-            archiveArtifacts artifacts: 'vm_ips.txt,vm_public_ips.json', fingerprint: true
+            archiveArtifacts artifacts: 'vm_ips.txt', fingerprint: true
           }
         }
       }
