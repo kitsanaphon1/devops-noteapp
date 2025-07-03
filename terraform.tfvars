@@ -5,7 +5,7 @@ prefix              = "tfproj"
 admin_username      = "azureuser"
 public_key_path     = "/home/sooya/terraform-keys/id_rsa_ansible_final.pub"
 
-vm_size             = "Standard_A2_v2"  
+vm_size             = "Standard_D2ads_v5"  
 image_publisher     = "Canonical"
 image_offer         = "0001-com-ubuntu-server-focal"
 image_sku           = "20_04-lts"
