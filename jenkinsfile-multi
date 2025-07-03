@@ -2,19 +2,15 @@ pipeline {
   agent any
 
   environment {
-    // ✅ กำหนดค่าพื้นฐานสำหรับ Terraform
-    TERRAFORM_HOST = "10.1.0.5"       // IP ของเครื่องที่ใช้รัน Terraform
-    TERRAFORM_USER = "sooya"          // SSH user
-    TF_REPO        = "https://github.com/kitsanaphon1/devops-noteapp.git"  // Git repo หลัก
-    TF_DIR         = "/home/sooya/terraform-vm5/devops-noteapp"            // ✅ โฟลเดอร์ repo root
-
-    // ✅ เปลี่ยนโหมดได้ง่าย ๆ
+    TERRAFORM_HOST = "10.1.0.5"
+    TERRAFORM_USER = "sooya"
+    TF_REPO        = "https://github.com/kitsanaphon1/devops-noteapp.git"
+    TF_DIR         = "/home/sooya/terraform-vm5/devops-noteapp"
     TF_MODE        = "apply"  // หรือ "destroy"
   }
 
   stages {
 
-    // 📥 Clone Repo หรือ Pull Update
     stage('📥 Git Clone on Terraform VM') {
       steps {
         sshagent(credentials: ['ssh-terraform-agent']) {
@@ -31,7 +27,6 @@ pipeline {
       }
     }
 
-    // 🛠 Ensure jq Installed
     stage('🛠 Ensure jq Installed') {
       steps {
         sshagent(credentials: ['ssh-terraform-agent']) {
@@ -50,7 +45,6 @@ pipeline {
       }
     }
 
-    // 💻 Terraform Apply หรือ Destroy
     stage('💻 Terraform Apply or Destroy') {
       steps {
         withCredentials([
@@ -78,7 +72,6 @@ pipeline {
       }
     }
 
-    // 🌐 Get All VM Public IPs
     stage('🌐 Get All VM Public IPs') {
       when {
         expression { return env.TF_MODE == 'apply' }
@@ -86,24 +79,31 @@ pipeline {
       steps {
         sshagent(credentials: ['ssh-terraform-agent']) {
           script {
-            // ✅ ดึงและ format IPs เป็นบรรทัดชื่อ VM + IP
-            def ipText = sh(
+            // ดึง IP ล้วน ๆ
+            def ipsRaw = sh(
               script: """
                 ssh -o StrictHostKeyChecking=no ${TERRAFORM_USER}@${TERRAFORM_HOST} '
                   cd ${TF_DIR}/terraform-multivm &&
                   terraform output -json public_ips |
-                  jq -r ".[]" |
-                  awk "{printf \\"sooya-vm-%d %s\\\\n\\", NR-1, \$0}"
+                  jq -r ".[]"
                 '
               """,
               returnStdout: true
             ).trim()
 
-            echo "📘 Public IPs with VM names:"
-            echo ipText
+            // แยกเป็น array
+            def ips = ipsRaw.split("\\r?\\n")
 
-            // ✅ เขียนไฟล์ txt
-            writeFile file: 'vm_ips.txt', text: ipText
+            // Format เป็นบรรทัดละ VM name + IP
+            def formatted = ""
+            for (int i = 0; i < ips.size(); i++) {
+              formatted += "sooya-vm-${i} ${ips[i]}\n"
+            }
+
+            echo "📘 Public IPs with VM names:\n${formatted}"
+
+            // Save txt file
+            writeFile file: 'vm_ips.txt', text: formatted
 
             archiveArtifacts artifacts: 'vm_ips.txt', fingerprint: true
           }
