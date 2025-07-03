@@ -5,10 +5,10 @@ pipeline {
     // ✅ กำหนดค่าพื้นฐานสำหรับ Terraform
     TERRAFORM_HOST = "10.1.0.5"       // IP ของเครื่องที่ใช้รัน Terraform
     TERRAFORM_USER = "sooya"          // SSH user
-    TF_REPO        = "https://github.com/kitsanaphon1/devops-noteapp.git"  // Git repo ที่เก็บ .tf
-    TF_DIR         = "/home/sooya/terraform-multivm"  // ✅ โฟลเดอร์ใหม่ (multi-vm)
+    TF_REPO        = "https://github.com/kitsanaphon1/devops-noteapp.git"  // Git repo หลัก
+    TF_DIR         = "/home/sooya/terraform-vm5/devops-noteapp"  // ✅ ชี้ไปโฟลเดอร์ repo root
 
-    // ✅ เปลี่ยนโหมดได้ง่าย ๆ ที่นี่: "apply" หรือ "destroy"
+     // ✅ เปลี่ยนโหมดได้ง่าย ๆ ที่นี่: "apply" หรือ "destroy"
     TF_MODE        = "apply"  // 🔁 เปลี่ยนเป็น "destroy" หากต้องการลบ
   }
 
@@ -48,7 +48,7 @@ pipeline {
                 export ARM_SUBSCRIPTION_ID="${ARM_SUBSCRIPTION_ID}" &&
                 export ARM_TENANT_ID="${ARM_TENANT_ID}" &&
 
-                cd ${TF_DIR} &&
+                cd ${TF_DIR}/terraform-multivm &&
 
                 terraform init -no-color &&
                 terraform ${TF_MODE} -var-file=terraform.tfvars -auto-approve -no-color
@@ -70,7 +70,7 @@ pipeline {
             def ipsJson = sh(
               script: """
                 ssh -o StrictHostKeyChecking=no ${TERRAFORM_USER}@${TERRAFORM_HOST} '
-                  cd ${TF_DIR} &&
+                  cd ${TF_DIR}/terraform-multivm &&
                   terraform output -json public_ips
                 '
               """,
